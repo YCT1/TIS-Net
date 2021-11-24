@@ -5,12 +5,12 @@ DATASET = "S"
 # Path to external source data (binary file in NumPy .npy format)
 # Dimension of source data: [N_SUBJECTS, N_SOURCE_NODES, N_SOURCE_NODES]
 # Ignored if DATASET = "S"
-SOURCE_DATA_PATH = "/path/to/external/source/data"
+SOURCE_DATA_PATH = "external/source/source_data.npy"
 
 # Path to external target data (binary file in NumPy .npy format)
 # Dimension of target data: [N_SUBJECTS, N_TARGET_NODES, N_TARGET_NODES]
 # Ignored if DATASET = "S"
-TARGET_DATA_PATH = "/path/to/external/target/data"
+TARGET_DATA_PATH = "external/target/target_data.npy"
 
 # Number of subjects in simulated data (Overwritten if DATASET = "E")
 N_SUBJECTS = 100
@@ -22,7 +22,7 @@ N_SOURCE_NODES = 35
 N_TARGET_NODES = 160
 
 # Number of traning epochs
-N_EPOCHS = 400
+N_EPOCHS = 5
 
 # Number of folds for cross validation
 N_FOLDS = 3
