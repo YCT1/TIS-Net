@@ -45,6 +45,11 @@ def print_fold_specific_results(fold, evaluation_results_fold_specific, mean_nor
     print("MAE(Pagerank Centrality) ", str(evaluation_results_fold_specific["MAE(PR)"].item()))
     print("MAE(Eigenvector Centrality) ", str(evaluation_results_fold_specific["MAE(EC)"].item()))
     print("MAE(Betweenness Centrality): ", str(evaluation_results_fold_specific["MAE(BC)"].item()))
+
+    print("MAE(Closeness Centrality): ", str(evaluation_results_fold_specific["MAE(CC)"].item()))
+    print("MAE(Node Strenghts): ", str(evaluation_results_fold_specific["MAE(NS)"].item()))
+    print("MAE(Cluester Coefients): ", str(evaluation_results_fold_specific["MAE(Coef)"].item()))
+
     print("Mean Norm Distance Between Each Test Subject and Predicted CBT: " + str(mean_norm_distance_fold_specific))
 
     # Printing the time elaplased for each epoch
@@ -53,7 +58,7 @@ def print_fold_specific_results(fold, evaluation_results_fold_specific, mean_nor
     print()
 
 
-def print_final_results(mae, mae_pr, mae_ec, mae_bc, mean_norm_dists):
+def print_final_results(mae, mae_pr, mae_ec, mae_bc,mae_cc,mae_ns,mae_coef, mean_norm_dists):
     """
         Prints the final test results by calculating mean and std of evaluation results in each fold 
 
@@ -76,6 +81,16 @@ def print_final_results(mae, mae_pr, mae_ec, mae_bc, mean_norm_dists):
     mae_bc_mean = np.mean(mae_bc)
     mae_bc_std = np.std(mae_bc)
 
+
+    mae_cc_mean = np.mean(mae_cc)
+    mae_cc_std = np.std(mae_cc)
+
+    mae_ns_mean = np.mean(mae_ns)
+    mae_ns_std = np.std(mae_ns)
+    
+    mae_coef_mean = np.mean(mae_coef)
+    mae_coef_std = np.std(mae_coef)
+
     mean_norm_dists_mean = np.mean(mean_norm_dists)
     mean_norm_dists_std = np.std(mean_norm_dists)
 
@@ -84,6 +99,12 @@ def print_final_results(mae, mae_pr, mae_ec, mae_bc, mean_norm_dists):
     print("MAE(Pagerank Centrality)", str(mae_pr_mean) + " +/- " + str(mae_pr_std))
     print("MAE(Eigenvector Centrality)", str(mae_ec_mean) + " +/- " + str(mae_ec_std))
     print("MAE(Betweenness Centrality)", str(mae_bc_mean) + " +/- " + str(mae_bc_std))
+
+
+    print("MAE(Closeness Centrality)", str(mae_cc_mean) + " +/- " + str(mae_cc_std))
+    print("MAE(Node Strenghts)", str(mae_ns_mean) + " +/- " + str(mae_ns_std))
+    print("MAE(Cluester Coefients)", str(mae_coef_mean) + " +/- " + str(mae_coef_std))
+
     print("Mean of Mean Norm Distances Between Each Test Subject and Predicted CBT:", str(mean_norm_dists_mean) + " +/- " + str(mean_norm_dists_std))
 
 

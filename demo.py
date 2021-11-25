@@ -74,6 +74,9 @@ mae = []
 mae_pr = []
 mae_ec = []
 mae_bc = []
+mae_ns = []
+mae_cc = []
+mae_coef = []
 
 """
     To store mean norm distance between predicted CBT and each test subject
@@ -153,6 +156,9 @@ for train_index, test_index in kf.split(X_s):
     mae_ec.append(evaluation_results_fold_specific["MAE(EC)"].item())
     mae_bc.append(evaluation_results_fold_specific["MAE(BC)"].item())
 
+    mae_ns.append(evaluation_results_fold_specific["MAE(NS)"].item())
+    mae_cc.append(evaluation_results_fold_specific["MAE(CC)"].item())
+    mae_coef.append(evaluation_results_fold_specific["MAE(Coef)"].item())
 
     mean_norm_dists.append(mean_norm_distance_fold_specific)
 
@@ -160,8 +166,9 @@ for train_index, test_index in kf.split(X_s):
         "predicted" : predicted_CBT,
         "ground_truth" : ground_truth_CBT
     })
-
+    np.save("output/"+MODEL_NAME+"/predictedCBT_fold_"+str(fold)+".npy",predicted_CBT)
+    np.save("output/"+MODEL_NAME+"/groundTruthCBT_fold_"+str(fold)+".npy",ground_truth_CBT)
     fold += 1
 
 # Print results across folds on stdout
-print_final_results(mae, mae_pr, mae_ec, mae_bc, mean_norm_dists)
+print_final_results(mae, mae_pr, mae_ec, mae_bc,mae_cc,mae_ns,mae_coef, mean_norm_dists)

@@ -304,7 +304,9 @@ class TIS_Net():
         self.pagerank_losses_test_fold_specific = []
         self.betweenness_losses_test_fold_specific = []
         self.eigenvector_losses_test_fold_specific = []
-
+        self.node_strenght_losses_test_fold_specific = []
+        self.closeness_centarility_losses_test_fold_specific = []
+        self.cluster_coefs_losses_test_fold_specific = []
 
     def train(self, X_casted_train_source_clusters, X_casted_train_target_clusters):
         # Preprocess data for source DGN
@@ -650,17 +652,27 @@ class TIS_Net():
         pagerank_loss_test = self.l1_loss(fake_topology_test[0], real_topology_test[0])
         betweenness_loss_test = self.l1_loss(fake_topology_test[1], real_topology_test[1])
         eigenvector_loss_test = self.l1_loss(fake_topology_test[2], real_topology_test[2])
+        nodestrenght_loss_test = self.l1_loss(fake_topology_test[3], real_topology_test[3])
+        closeness_loss_test = self.l1_loss(fake_topology_test[4], real_topology_test[4])
+        cluster_loss_test = self.l1_loss(fake_topology_test[5], real_topology_test[5])
 
         self.pagerank_losses_test_fold_specific.append(pagerank_loss_test.detach().cpu().numpy())
         self.betweenness_losses_test_fold_specific.append(betweenness_loss_test.detach().cpu().numpy())
         self.eigenvector_losses_test_fold_specific.append(eigenvector_loss_test.detach().cpu().numpy())
         self.l1_losses_test_fold_specific.append(L1_loss_test.detach().cpu().numpy())
+        
+        self.node_strenght_losses_test_fold_specific.append(nodestrenght_loss_test.detach().cpu().numpy())
+        self.closeness_centarility_losses_test_fold_specific.append(closeness_loss_test.detach().cpu().numpy())
+        self.cluster_coefs_losses_test_fold_specific.append(cluster_loss_test.detach().cpu().numpy())
 
         evaluation_results_fold_specific = {
             "MAE" : L1_loss_test,
             "MAE(PR)" : pagerank_loss_test,
             "MAE(EC)" : eigenvector_loss_test,
             "MAE(BC)" : betweenness_loss_test,
+            "MAE(CC)" :  closeness_loss_test,
+            "MAE(NS)" : nodestrenght_loss_test,
+            "MAE(Coef)" : cluster_loss_test
         }
 
         return predicted_CBT, ground_truth_CBT, evaluation_results_fold_specific
