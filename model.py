@@ -3,181 +3,74 @@ from torch.nn import Linear, ReLU
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.nn.modules.activation import Sigmoid, Softmax
-from torch.nn import Sequential as Seq
+from torch.nn import Sequential
 from torch.nn import Dropout
 from torch_geometric.data.data import Data
-from torch_geometric.nn import NNConv, Sequential
+from torch_geometric.nn import NNConv
+from torch_geometric.nn import Sequential as Seq
 from torch_geometric.nn import GCNConv
 from torch_geometric.nn import BatchNorm
 from torch_geometric.nn import FiLMConv, CGConv,GATv2Conv, TransformerConv,SplineConv
 import numpy as np
 from torch_geometric.nn.models.autoencoder import GAE
-from config import N_CLUSTERS, N_SOURCE_NODES, N_TARGET_NODES, DGN_MODEL_PARAMS_SOURCE, DGN_MODEL_PARAMS_TARGET, N_EPOCHS, N_CLUSTERS, USE_CUDA
+from config import N_CLUSTERS, N_SOURCE_NODES, N_TARGET_NODES, DGN_MODEL_PARAMS_SOURCE, DGN_MODEL_PARAMS_TARGET, N_EPOCHS, N_CLUSTERS, USE_CUDA, N_DIMENSIONS
 from helper import cast_to_DGN_graph, source_to_graph
 from random import sample
 from centrality import topological_measures
 import time
+
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
-        """
-        nn = Sequential(Linear(1, N_SOURCE_NODES * N_SOURCE_NODES), ReLU())
-        self.conv1 = NNConv(N_SOURCE_NODES, N_SOURCE_NODES, nn, aggr='mean',
-                            root_weight=True, bias=True)
-        self.conv11 = BatchNorm(
-            N_SOURCE_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True)
 
-        nn = Sequential(Linear(1, N_SOURCE_NODES * N_TARGET_NODES), ReLU())
-        self.conv2 = NNConv(N_SOURCE_NODES, N_TARGET_NODES, nn, aggr='mean',
-                            root_weight=True, bias=True)
-        self.conv22 = BatchNorm(
-            N_TARGET_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True)
 
-        nn = Sequential(Linear(1, N_SOURCE_NODES * N_TARGET_NODES), ReLU())
-        self.conv3 = NNConv(N_SOURCE_NODES, N_TARGET_NODES, nn, aggr='mean',
-                            root_weight=True, bias=True)
-        self.conv33 = BatchNorm(
-            N_TARGET_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True)
-        """
-        s1 = N_SOURCE_NODES + int((N_TARGET_NODES - N_SOURCE_NODES) * 0.2)
-        s2 = N_SOURCE_NODES + int((N_TARGET_NODES - N_SOURCE_NODES) * 0.4)
-        s3 = N_SOURCE_NODES + int((N_TARGET_NODES - N_SOURCE_NODES) * 0.6)
-        s4 = N_SOURCE_NODES + int((N_TARGET_NODES - N_SOURCE_NODES) * 0.8)
 
-        nn1 = Seq(Linear(1, N_SOURCE_NODES * N_SOURCE_NODES), ReLU())
-        nn2 = Seq(Linear(1, N_SOURCE_NODES *  s1), ReLU())
-        nn3 = Seq(Linear(1, s1  * s2), ReLU())
-        nn4 = Seq(Linear(1, s2  * s3), ReLU())
-        nn5 = Seq(Linear(1, s3  * s4), ReLU())
-        nn6 = Seq(Linear(1, s4  * N_TARGET_NODES), ReLU())
-        nn7 = Seq(Linear(1, N_TARGET_NODES  * N_TARGET_NODES), ReLU())
-        """
-        self.test_layer = Sequential("x, edge_index, edge_attr",[
-            (NNConv(N_SOURCE_NODES, N_SOURCE_NODES, aggr='mean',root_weight=True, bias=True, nn=nn1), 'x, edge_index, edge_attr -> x'),
-            #Sigmoid(),
-            BatchNorm( N_SOURCE_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-        
-        ]) 
+        nnStart = Sequential(Linear(1, N_SOURCE_NODES * N_SOURCE_NODES), ReLU())
 
-        self.test_layer2 = Sequential("x, edge_index, edge_attr",[
+        nnArray = []
+        for i in range(0,len(N_DIMENSIONS)):
+            model = Sequential(Linear(1, N_DIMENSIONS[i][0] * N_DIMENSIONS[i][1]),ReLU())
+            nnArray.append(model)
+        nnEnd = Sequential(Linear(1, N_TARGET_NODES  * N_TARGET_NODES), ReLU())
 
-            (NNConv(N_SOURCE_NODES,  (N_TARGET_NODES),aggr='mean',root_weight=True, bias=True,nn=nn2), 'x, edge_index, edge_attr -> x'),
-            #Sigmoid(),
-            BatchNorm( (N_TARGET_NODES) , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-
-        
-        ])
-
-        self.test_layer3 = Sequential("x, edge_index, edge_attr",[
-
-            (NNConv((N_TARGET_NODES) , N_TARGET_NODES,aggr='mean',root_weight=True, bias=True, nn=nn3), 'x, edge_index, edge_attr -> x'),
-            BatchNorm( N_TARGET_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-        
-        ])
-        """
         ##### Edge based convulution sequential
-        self.test_layer = Sequential("x, edge_index, edge_attr",[
+        self.startLayer = Seq("x, edge_index, edge_attr",[
             # Layer 1
-            (NNConv(N_SOURCE_NODES, N_SOURCE_NODES, aggr='mean',root_weight=True, bias=True, nn=nn1), 'x, edge_index, edge_attr -> x'),
+            (NNConv(N_SOURCE_NODES, N_SOURCE_NODES, aggr='mean',root_weight=True, bias=True, nn=nnStart), 'x, edge_index, edge_attr -> x'),
             BatchNorm(N_SOURCE_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
             (Sigmoid(), "x -> x"),
             (Dropout(p=0.5),"x -> x"),
+        ]) 
 
-            # Layer 2 ## Scaling
-            (NNConv(N_SOURCE_NODES,  s1,aggr='mean',root_weight=True, bias=True,nn=nn2), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(s1 , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
+        self.middleLayers = []
+        for i in range(0, len(N_DIMENSIONS)):
+            layer = Seq("x, edge_index, edge_attr",[
+            (NNConv(in_channels=int(N_DIMENSIONS[i][0]), out_channels=int(N_DIMENSIONS[i][1]), aggr='mean',root_weight=True, bias=True, nn=nnArray[i]), 'x, edge_index, edge_attr -> x'),
+            BatchNorm(N_DIMENSIONS[i][1], eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
             (Dropout(p=0.5),"x -> x"),
-
-            (NNConv(s1,  s2,aggr='mean',root_weight=True, bias=True,nn=nn3), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(s2 , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
             (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            (NNConv(s2,  s3,aggr='mean',root_weight=True, bias=True,nn=nn4), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(s3 , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            (NNConv(s3,  s4,aggr='mean',root_weight=True, bias=True,nn=nn5), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(s4 , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            (NNConv(s4, N_TARGET_NODES, aggr='mean',root_weight=True, bias=True,nn=nn6), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(N_TARGET_NODES , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            ####
-            # Layer 3
-            (NNConv(N_TARGET_NODES , N_TARGET_NODES,aggr='mean',root_weight=True, bias=True, nn=nn7), 'x, edge_index, edge_attr -> x'),
+            ]) 
+            self.middleLayers.append(layer)
+        
+        self.endLayer = Seq("x, edge_index, edge_attr",[
+            (NNConv(N_TARGET_NODES , N_TARGET_NODES,aggr='mean',root_weight=True, bias=True, nn=nnEnd), 'x, edge_index, edge_attr -> x'),
             BatchNorm(N_TARGET_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
             (Dropout(p=0.5),"x -> x"),
             (Sigmoid(), "x -> x"),
         ]) 
 
 
-        self.test_layerGCN = Sequential("x, edge_index, edge_attr",[
-            # Layer 1
-            (GCNConv(N_SOURCE_NODES, N_SOURCE_NODES, aggr='mean', bias=True), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(N_SOURCE_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
 
-            # Layer 2 ## Scaling
-            (GCNConv(N_SOURCE_NODES,  s1,aggr='mean',bias=True), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(s1 , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            (GCNConv(s1,  s2,aggr='mean',bias=True), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(s2 , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            (GCNConv(s2,  s3,aggr='mean',bias=True), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(s3 , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            (GCNConv(s3,  s4,aggr='mean',bias=True), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(s4 , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            (GCNConv(s4, N_TARGET_NODES, aggr='mean',bias=True), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(N_TARGET_NODES , eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Sigmoid(), "x -> x"),
-            (Dropout(p=0.5),"x -> x"),
-
-            ####
-            # Layer 3
-            (GCNConv(N_TARGET_NODES , N_TARGET_NODES,aggr='mean',bias=True), 'x, edge_index, edge_attr -> x'),
-            BatchNorm(N_TARGET_NODES, eps=1e-03, momentum=0.1, affine=True, track_running_stats=True),
-            (Dropout(p=0.5),"x -> x"),
-            (Sigmoid(), "x -> x"),
-        ]) 
         
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
-        """
-        x1 = torch.sigmoid(self.test_layer(x, edge_index.to(torch.long), edge_attr))
-        x1 = F.dropout(x1, training=self.training)
 
-        x2 = torch.sigmoid(self.test_layer2(x1, edge_index.to(torch.long), edge_attr))
-        x2 = F.dropout(x2, training=self.training)
-
-        x3 = torch.sigmoid(self.test_layer3(x2, edge_index.to(torch.long), edge_attr))
-        x3 = F.dropout(x3, training=self.training)
-        """
-        x3 = self.test_layer(x,edge_index.to(torch.long),edge_attr)
-        """
-            If the target data includes many ROIs,
-            enabling the second layer below makes the third layer consumed too much memory that program crashes
-        """
-       
+        x1 = self.startLayer(x,edge_index.to(torch.long),edge_attr)
+        for i in range(0, len(N_DIMENSIONS)):
+            x1 = self.middleLayers[i](x1,edge_index.to(torch.long),edge_attr)
+            
+        x3 = self.endLayer(x1,edge_index.to(torch.long),edge_attr)
 
         x4 = torch.matmul(x3.t(), x3)
 
@@ -218,17 +111,17 @@ class DGN(torch.nn.Module):
         super(DGN, self).__init__()
         self.model_params = MODEL_PARAMS
 
-        nn = Seq(Linear(
+        nn = Sequential(Linear(
             self.model_params["Linear1"]["in"], self.model_params["Linear1"]["out"]), ReLU())
         self.conv1 = NNConv(
             self.model_params["conv1"]["in"], self.model_params["conv1"]["out"], nn, aggr='mean')
 
-        nn = Seq(Linear(
+        nn = Sequential(Linear(
             self.model_params["Linear2"]["in"], self.model_params["Linear2"]["out"]), ReLU())
         self.conv2 = NNConv(
             self.model_params["conv2"]["in"], self.model_params["conv2"]["out"], nn, aggr='mean')
 
-        nn = Seq(Linear(
+        nn = Sequential(Linear(
             self.model_params["Linear3"]["in"], self.model_params["Linear3"]["out"]), ReLU())
         self.conv3 = NNConv(
             self.model_params["conv3"]["in"], self.model_params["conv3"]["out"], nn, aggr='mean')

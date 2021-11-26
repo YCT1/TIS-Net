@@ -5,24 +5,27 @@ DATASET = "E2"
 # Path to external source data (binary file in NumPy .npy format)
 # Dimension of source data: [N_SUBJECTS, N_SOURCE_NODES, N_SOURCE_NODES]
 # Ignored if DATASET = "S"
-SOURCE_DATA_PATH = "external/source/source.npy"
+SOURCE_DATA_PATH = "external/source_data.npy"
 
 # Path to external target data (binary file in NumPy .npy format)
 # Dimension of target data: [N_SUBJECTS, N_TARGET_NODES, N_TARGET_NODES]
 # Ignored if DATASET = "S"
-TARGET_DATA_PATH = "external/target/target.npy"
+TARGET_DATA_PATH = "external/target_data.npy"
 
 # Number of subjects in simulated data (Overwritten if DATASET = "E")
 N_SUBJECTS = 100
 
 # Number of ROIs in source brain graph for simulated data (Overwritten if DATASET = "E")
-N_SOURCE_NODES = 35
+N_SOURCE_NODES = 10
 
 # Number of ROIs in target brain graph for simulated data (Overwritten if DATASET = "E")
-N_TARGET_NODES = 160
+N_TARGET_NODES = 25
+
+# Step version
+N_STEP = 5
 
 # Number of traning epochs
-N_EPOCHS = 400
+N_EPOCHS = 50
 
 # Number of folds for cross validation
 N_FOLDS = 3
@@ -73,6 +76,13 @@ DGN_MODEL_PARAMS_TARGET = {
 
 from helper import create_simulated_data, squareMatrixToHorizantal
 import numpy as np
+
+
+
+reso_arr = np.array([np.arange(0,N_STEP)/N_STEP,np.arange(1,N_STEP+1)/N_STEP]).T
+N_DIMENSIONS = ((N_TARGET_NODES-N_SOURCE_NODES)*(reso_arr)+N_SOURCE_NODES).astype(int)
+N_DIMENSIONS[0][0] = N_SOURCE_NODES
+N_DIMENSIONS[-1][1] = N_TARGET_NODES
 
 if DATASET.lower() == "e":
     X_s = squareMatrixToHorizantal (np.load(SOURCE_DATA_PATH))
